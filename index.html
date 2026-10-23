@@ -1,0 +1,497 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>RutaMap · Rute Kunjungan Salesman</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<style>
+:root{--bg:#0f1419;--panel:#171d25;--panel2:#1e2630;--text:#e7edf3;--mut:#8a97a6;--line:#2a3441;--acc:#38bdf8;--acc-ink:#111;--r:10px}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;background:var(--bg);color:var(--text);font:13px/1.35 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;font-variant-numeric:tabular-nums}
+button,input,select{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:2px solid var(--acc);outline-offset:1px}
+#app{display:grid;grid-template-columns:350px 1fr;grid-template-rows:auto 1fr;height:100dvh}
+header{grid-column:1/-1;display:flex;align-items:center;gap:10px;padding:8px 12px;background:var(--panel);border-bottom:1px solid var(--line);flex-wrap:wrap}
+.brand{display:flex;align-items:baseline;gap:6px;font-size:15px;letter-spacing:.2px}
+.brand i{width:10px;height:10px;border-radius:3px;background:var(--acc);display:inline-block;transform:translateY(1px)}
+.brand small{color:var(--mut);font-size:11px}
+.search{position:relative;flex:1 1 220px;max-width:420px}
+.search input{width:100%;padding:7px 28px 7px 10px;border-radius:8px;border:1px solid var(--line);background:var(--panel2)}
+.search button{position:absolute;right:2px;top:2px;border:0;background:none;color:var(--mut);padding:4px 8px}
+.kpis{display:flex;gap:6px;flex:1 1 auto;overflow-x:auto;scrollbar-width:none}
+.kpis::-webkit-scrollbar{display:none}
+.k{background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:4px 10px;white-space:nowrap;min-width:78px}
+.k span{display:block;color:var(--mut);font-size:10.5px}
+.k b{font-size:14px}
+.k.hl{border-color:var(--acc)}
+.hb{display:flex;gap:6px;margin-left:auto}
+.btn{border:1px solid var(--line);background:var(--panel2);border-radius:8px;padding:6px 10px;display:inline-flex;align-items:center;gap:6px}
+.btn:hover{border-color:var(--acc)}
+.btn.pri{background:var(--acc);color:var(--acc-ink);border-color:var(--acc);font-weight:600}
+.btn.sm{padding:3px 8px;font-size:11.5px}
+.btn svg{width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+aside{background:var(--panel);border-right:1px solid var(--line);display:flex;flex-direction:column;min-height:0}
+.tabs{display:flex;border-bottom:1px solid var(--line)}
+.tabs button{flex:1;border:0;background:none;padding:9px 4px;color:var(--mut);border-bottom:2px solid transparent}
+.tabs button.on{color:var(--text);border-bottom-color:var(--acc);font-weight:600}
+.pane{display:none;overflow-y:auto;padding:10px;flex:1;min-height:0}
+.pane.on{display:block}
+.grp{margin-bottom:12px}
+.gh{display:flex;align-items:center;justify-content:space-between;margin-bottom:5px;color:var(--mut);font-size:11.5px}
+.gh b{color:var(--text);font-size:12.5px}
+.gh .ab{display:flex;gap:4px}
+.row{position:relative;display:flex;align-items:center;gap:7px;padding:5px 6px;border-radius:6px;cursor:pointer;overflow:hidden}
+.row:hover{background:var(--panel2)}
+.row input{accent-color:var(--acc);margin:0}
+.row i{width:9px;height:9px;border-radius:50%;flex:none}
+.row .nm{flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.row .ct{color:var(--mut);font-size:11.5px}
+.row em{position:absolute;left:0;bottom:0;height:2px;background:var(--c);opacity:.75}
+.chips{display:flex;flex-wrap:wrap;gap:5px}
+.chip{border:1px solid var(--line);background:var(--panel2);border-radius:999px;padding:3px 10px;font-size:12px;user-select:none}
+.chip.on{background:var(--acc);border-color:var(--acc);color:var(--acc-ink);font-weight:600}
+.chip small{opacity:.7;margin-left:3px}
+.fld{display:flex;align-items:center;gap:8px;margin:6px 0}
+.fld label{color:var(--mut);flex:none}
+.fld input[type=number],.fld input[type=text],.fld select{flex:1;min-width:0;padding:5px 8px;border-radius:7px;border:1px solid var(--line);background:var(--panel2)}
+.item{display:flex;gap:8px;padding:7px 6px;border-bottom:1px solid var(--line);cursor:pointer;align-items:center}
+.item:hover{background:var(--panel2)}
+.item i{width:9px;height:9px;border-radius:50%;flex:none}
+.item .t{flex:1;min-width:0}
+.item .t b{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:600}
+.item .t span{color:var(--mut);font-size:11.5px}
+.item .o{text-align:right;font-weight:600;white-space:nowrap}
+.item .o small{display:block;color:var(--mut);font-weight:400;font-size:11px}
+.note{color:var(--mut);font-size:11.5px;margin:6px 0}
+.sum{display:grid;grid-template-columns:repeat(2,1fr);gap:6px;margin:8px 0}
+.sum div{background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:6px 8px}
+.sum span{display:block;color:var(--mut);font-size:10.5px}
+.sum b{font-size:14px}
+.stop{display:flex;align-items:center;gap:8px;padding:6px 4px;border-bottom:1px solid var(--line)}
+.stop .n{width:22px;height:22px;border-radius:50%;background:var(--acc);color:var(--acc-ink);display:grid;place-items:center;font-size:11px;font-weight:700;flex:none}
+.stop .t{flex:1;min-width:0;cursor:pointer}
+.stop .t b{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:600}
+.stop .t span{color:var(--mut);font-size:11.5px}
+.stop a{color:var(--acc);text-decoration:none;border:1px solid var(--line);border-radius:7px;padding:3px 8px;font-size:12px}
+.batch{display:flex;flex-wrap:wrap;gap:5px;margin:6px 0}
+.batch a{color:var(--acc-ink);background:var(--acc);text-decoration:none;border-radius:7px;padding:4px 9px;font-size:12px;font-weight:600}
+main{position:relative;min-height:0}
+#map{position:absolute;inset:0;background:var(--bg)}
+.mapbtns{position:absolute;top:10px;right:10px;z-index:500;display:flex;flex-direction:column;gap:6px}
+.mapbtns .btn{width:34px;height:34px;padding:0;justify-content:center;background:var(--panel);box-shadow:0 2px 8px #0004}
+.mapbtns .btn.on{background:var(--acc);color:var(--acc-ink)}
+#empty{position:absolute;inset:0;z-index:600;display:grid;place-items:center;background:color-mix(in srgb,var(--bg) 82%,transparent);padding:16px}
+#empty.hidden{display:none}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:18px;max-width:380px;width:100%;box-shadow:0 10px 40px #0006}
+.card h2{margin:0 0 6px;font-size:17px}
+.card p{margin:0 0 12px;color:var(--mut)}
+.card .acts{display:flex;gap:6px;flex-wrap:wrap}
+.modal{position:fixed;inset:0;z-index:2000;background:#0008;display:grid;place-items:center;padding:12px;overflow:auto}
+.modal.hidden{display:none}
+.modal .card{max-width:640px;max-height:92dvh;overflow:auto}
+.mh{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
+.mh b{font-size:15px}
+.x{border:0;background:none;color:var(--mut);font-size:16px}
+.drop{border:2px dashed var(--line);border-radius:12px;padding:26px 12px;text-align:center;color:var(--mut);position:relative}
+.drop.over{border-color:var(--acc);color:var(--text)}
+.drop input{position:absolute;inset:0;opacity:0;cursor:pointer}
+.mg{display:grid;grid-template-columns:1fr 1fr;gap:6px 10px;margin:10px 0}
+.mg label{display:block;color:var(--mut);font-size:11.5px;margin-bottom:2px}
+.mg select{width:100%;padding:5px 6px;border-radius:7px;border:1px solid var(--line);background:var(--panel2)}
+.pv{background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:8px 10px;margin:8px 0;font-size:12px}
+.pv .ok{color:#4ade80}.pv .warn{color:#fbbf24}
+.pv ul{margin:4px 0 0;padding-left:16px;color:var(--mut)}
+.modes{display:flex;gap:12px;margin:8px 0;flex-wrap:wrap}
+.modes label{display:flex;gap:5px;align-items:center}
+.modes input{accent-color:var(--acc)}
+#themePop{position:absolute;right:12px;top:52px;z-index:1500;width:260px;display:none}
+#themePop.on{display:block}
+.sw{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin:8px 0}
+.sw button{border:2px solid var(--line);border-radius:9px;padding:0;height:42px;overflow:hidden;display:flex;flex-direction:column;background:none}
+.sw button.on{border-color:var(--acc)}
+.sw button span{flex:1}
+.sw button small{font-size:10px;padding:1px 0;text-align:center}
+.accrow{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.accrow input[type=color]{width:34px;height:26px;border:1px solid var(--line);border-radius:6px;background:none;padding:0}
+.accrow .d{width:20px;height:20px;border-radius:50%;border:2px solid var(--line);padding:0}
+#toast{position:fixed;left:50%;bottom:22px;transform:translateX(-50%) translateY(20px);background:var(--text);color:var(--bg);padding:8px 14px;border-radius:999px;z-index:3000;opacity:0;pointer-events:none;transition:.2s;max-width:90vw}
+#toast.show{opacity:1;transform:translateX(-50%)}
+.num{display:grid;place-items:center;width:24px;height:24px;border-radius:50%;background:var(--acc);color:var(--acc-ink);font-weight:700;font-size:11px;border:2px solid #fff;box-shadow:0 1px 6px #0007}
+.num.s{border-radius:6px;background:#fff;color:#111}
+.me{width:14px;height:14px;border-radius:50%;background:#3b82f6;border:3px solid #fff;box-shadow:0 0 0 3px #3b82f655}
+.leaflet-popup-content-wrapper,.leaflet-popup-tip{background:var(--panel);color:var(--text)}
+.leaflet-popup-content{margin:10px 12px}
+.pp b{font-size:13.5px}.pp .m{color:var(--mut);margin-top:2px}.pp .o{margin:5px 0}
+.pb{display:flex;gap:6px;margin-top:6px}
+.pb a,.pb button{border:1px solid var(--line);background:var(--panel2);color:var(--text);border-radius:7px;padding:4px 9px;text-decoration:none;font-size:12px}
+.pb a{background:var(--acc);color:var(--acc-ink);border-color:var(--acc);font-weight:600}
+.leaflet-container a.leaflet-popup-close-button{color:var(--mut)}
+@media(max-width:820px){
+  #app{grid-template-columns:1fr;grid-template-rows:auto 44dvh 1fr}
+  main{order:2}aside{order:3;border-right:0;border-top:1px solid var(--line)}
+  .search{max-width:none;flex-basis:100%;order:3}
+  .kpis{order:4;flex-basis:100%}
+  .hb{order:2}
+  #themePop{top:48px}
+}
+@media(prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<div id="app">
+  <header>
+    <div class="brand"><i></i><b>RutaMap</b><small>rute kunjungan</small></div>
+    <div class="search"><input id="q" type="search" placeholder="Cari toko, ID pelanggan, atau salesman" autocomplete="off"><button id="qx" title="Hapus">✕</button></div>
+    <div class="kpis" id="kpis"></div>
+    <div class="hb">
+      <button class="btn pri" id="btnUp"><svg viewBox="0 0 24 24"><path d="M12 16V4M6 10l6-6 6 6M4 20h16"/></svg>Upload</button>
+      <button class="btn" id="btnTheme" title="Tema warna"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><circle cx="8.5" cy="10" r="1"/><circle cx="12" cy="7.5" r="1"/><circle cx="15.5" cy="10" r="1"/><path d="M12 21c-1.5 0-1.5-2 0-3 1.5-1 1-3-1-3"/></svg></button>
+    </div>
+  </header>
+
+  <aside>
+    <nav class="tabs"><button class="on" data-t="filter">Filter</button><button data-t="list">Toko</button><button data-t="route">Rute</button></nav>
+
+    <section class="pane on" id="p-filter">
+      <div class="grp"><div class="gh"><b>Salesman</b><span class="ab"><button class="btn sm" data-all="sales">Semua</button><button class="btn sm" data-none="sales">Hapus</button></span></div><div id="salesList"></div></div>
+      <div class="grp"><div class="gh"><b>Hari kunjungan</b><span class="ab"><button class="btn sm" data-all="days">Semua</button><button class="btn sm" data-none="days">Hapus</button></span></div><div class="chips" id="dayList"></div></div>
+      <div class="grp"><div class="gh"><b>Tampilan</b></div>
+        <div class="fld"><label for="minO" id="minOl">Omset ≥</label><input id="minO" type="number" min="0" step="any" placeholder="0"></div>
+        <label class="row"><input type="checkbox" id="sizeO" checked><span class="nm">Ukuran pin mengikuti omset</span></label>
+      </div>
+    </section>
+
+    <section class="pane" id="p-list">
+      <div class="fld"><label for="sortBy">Urut</label><select id="sortBy"><option value="omset">Omset terbesar</option><option value="name">Nama toko A–Z</option><option value="sales">Salesman</option><option value="near">Terdekat dari GPS</option></select></div>
+      <div id="listBox"></div>
+    </section>
+
+    <section class="pane" id="p-route">
+      <div class="fld"><label for="startMode">Mulai dari</label><select id="startMode"><option value="depot">Depo / Kantor</option><option value="gps">Posisi GPS saya</option><option value="store">Toko tertentu</option></select></div>
+      <div id="sp-depot">
+        <div class="fld"><input id="depotIn" type="text" placeholder="-6.2088, 106.8456"><button class="btn sm" id="depotSet">Simpan</button><button class="btn sm" id="depotPick">Klik peta</button></div>
+        <div class="note" id="depotNote"></div>
+      </div>
+      <div id="sp-store" style="display:none"><div class="fld"><input id="startStore" type="text" list="dl" placeholder="Ketik nama toko awal"></div><datalist id="dl"></datalist></div>
+      <label class="row"><input type="checkbox" id="roundTrip"><span class="nm">Kembali ke titik awal</span></label>
+      <div class="fld"><label for="svc">Menit / toko</label><input id="svc" type="number" min="0" value="10"></div>
+      <button class="btn pri" id="btnRoute" style="width:100%;justify-content:center;margin-top:6px">Susun rute optimal</button>
+      <div class="note" id="routeHint">Rute disusun dari toko yang lolos filter saat ini (maks 300).</div>
+      <div id="routeOut"></div>
+    </section>
+  </aside>
+
+  <main>
+    <div id="map"></div>
+    <div class="mapbtns">
+      <button class="btn" id="btnGps" title="Posisi saya"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><circle cx="12" cy="12" r="8"/><path d="M12 1v3M12 20v3M1 12h3M20 12h3"/></svg></button>
+      <button class="btn" id="btnFit" title="Tampilkan semua"><svg viewBox="0 0 24 24"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg></button>
+    </div>
+    <div id="empty" class="hidden"><div class="card"><h2>Belum ada data kunjungan</h2><p>Upload Excel jadwal kunjungan (salesman, ID, nama toko, hari, omset, latitude, longitude) atau coba dulu dengan data contoh.</p><div class="acts"><button class="btn pri" id="e-up">Upload Excel</button><button class="btn" id="e-demo">Pakai data contoh</button><button class="btn" id="e-tpl">Unduh template</button></div></div></div>
+  </main>
+</div>
+
+<div id="themePop" class="card">
+  <b>Tema warna</b>
+  <div class="sw" id="sw"></div>
+  <div class="accrow"><span style="color:var(--mut)">Aksen</span><input type="color" id="accPick"><span id="accDots" class="accrow"></span></div>
+  <div style="margin-top:8px"><button class="btn sm" id="accReset">Reset aksen</button></div>
+</div>
+
+<div id="modal" class="modal hidden"><div class="card">
+  <div class="mh"><b>Upload data kunjungan</b><button class="x" data-close>✕</button></div>
+  <div class="drop" id="drop">Tarik file .xlsx / .xls / .csv ke sini, atau klik untuk pilih<input type="file" id="file" accept=".xlsx,.xls,.csv"></div>
+  <div id="step2" style="display:none">
+    <div class="fld"><label for="sheetSel">Sheet</label><select id="sheetSel"></select></div>
+    <div class="mg" id="mg"></div>
+    <div class="pv" id="pv"></div>
+    <div class="modes"><label><input type="radio" name="mode" value="replace" checked>Ganti semua data</label><label><input type="radio" name="mode" value="merge">Update per ID toko (gabung)</label></div>
+    <div class="acts" style="display:flex;gap:6px"><button class="btn pri" id="apply">Terapkan data</button><button class="btn" data-close>Batal</button></div>
+  </div>
+</div></div>
+<div id="toast"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script>
+(()=>{
+const $=s=>document.querySelector(s),$$=s=>[...document.querySelectorAll(s)];
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const DAYS=['Senin','Selasa','Rabu','Kamis','Jumat','Sabtu','Minggu'];
+const DM={sen:0,senin:0,mon:0,monday:0,sel:1,selasa:1,tue:1,tuesday:1,rab:2,rabu:2,wed:2,wednesday:2,kam:3,kamis:3,thu:3,thursday:3,jum:4,jumat:4,"jum'at":4,jumaat:4,fri:4,friday:4,sab:5,sabtu:5,sat:5,saturday:5,min:6,minggu:6,ahad:6,sun:6,sunday:6};
+const THEMES={
+ gelap:{n:'Gelap',dark:1,bg:'#0f1419',panel:'#171d25',panel2:'#1e2630',text:'#e7edf3',mut:'#8a97a6',line:'#2a3441',acc:'#38bdf8'},
+ terang:{n:'Terang',dark:0,bg:'#f3f5f8',panel:'#ffffff',panel2:'#edf0f4',text:'#18212b',mut:'#66717f',line:'#dde2e9',acc:'#2563eb'},
+ midnight:{n:'Midnight',dark:1,bg:'#0b1020',panel:'#121a33',panel2:'#19234a',text:'#e6e9ff',mut:'#8d96c7',line:'#26325e',acc:'#818cf8'},
+ hutan:{n:'Hutan',dark:1,bg:'#0d1512',panel:'#14211c',panel2:'#1b2c25',text:'#e5f2ec',mut:'#84a095',line:'#24392f',acc:'#34d399'},
+ sunset:{n:'Sunset',dark:0,bg:'#fbf4ee',panel:'#fffaf6',panel2:'#f6e9de',text:'#2b1d14',mut:'#8a6f5c',line:'#ecd9c8',acc:'#ea580c'},
+ sakura:{n:'Sakura',dark:0,bg:'#fbf1f4',panel:'#fffafb',panel2:'#f8e6ec',text:'#2d1820',mut:'#8d6573',line:'#efd3dc',acc:'#db2777'}
+};
+const ACCS=['#38bdf8','#2563eb','#34d399','#facc15','#ea580c','#e11d48','#a855f7'];
+const LIGHT='https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',DARK='https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png';
+const KEY='rutamap_sales_v1';
+let S={stores:[],label:'Omset',theme:'gelap',accent:null,depot:null,svc:10,sizeByOmset:true};
+const R={sales:new Set(),days:new Set(),q:'',minO:0,route:null,pos:null,watch:null,pick:false,colors:{},sort:'omset',maxO:1,cbs:[]};
+function save(){try{localStorage.setItem(KEY,JSON.stringify(S,(k,v)=>k[0]==='_'?undefined:v))}catch(e){}}
+function load(){try{const j=JSON.parse(localStorage.getItem(KEY)||'null');if(j)Object.assign(S,j)}catch(e){}}
+function toast(m,ms=2800){const t=$('#toast');t.textContent=m;t.classList.add('show');clearTimeout(toast._t);toast._t=setTimeout(()=>t.classList.remove('show'),ms)}
+
+/* ---------- format ---------- */
+const nf=new Intl.NumberFormat('id-ID');
+const rpFull=n=>'Rp '+nf.format(Math.round(n||0));
+function rp(n){const a=Math.abs(n);if(a>=1e9)return 'Rp '+(n/1e9).toFixed(2).replace('.',',')+' M';if(a>=1e6)return 'Rp '+(n/1e6).toFixed(1).replace('.',',')+' jt';if(a>=1e3)return 'Rp '+Math.round(n/1e3)+' rb';return 'Rp '+Math.round(n)}
+const fmtMin=m=>{m=Math.round(m);const h=Math.floor(m/60);return h?`${h}j ${m%60}m`:`${m}m`};
+const km1=k=>k.toFixed(1).replace('.',',')+' km';
+
+/* ---------- parsing ---------- */
+function pCoord(v){if(typeof v==='number')return v;const s=String(v??'').trim().replace(',','.');return s===''?NaN:parseFloat(s)}
+function pMoney(v){if(typeof v==='number')return v;let s=String(v??'').replace(/rp|\s/gi,'');if(!s)return 0;
+ const hc=s.includes(','),hd=s.includes('.');
+ if(hc&&hd){const dec=s.lastIndexOf(',')>s.lastIndexOf('.')?',':'.';s=dec===','?s.replace(/\./g,'').replace(',','.'):s.replace(/,/g,'')}
+ else if(hc){s=/^\d{1,3}(,\d{3})+$/.test(s)?s.replace(/,/g,''):s.replace(',','.')}
+ else if(hd){if(/^\d{1,3}(\.\d{3})+$/.test(s))s=s.replace(/\./g,'')}
+ const n=parseFloat(s);return isFinite(n)?n:0}
+function pDays(v){const t=String(v??'').toLowerCase().replace(/[’`]/g,"'").split(/[^a-z']+/).filter(Boolean);const set=new Set();t.forEach(x=>{if(x in DM)set.add(DM[x])});return{days:[...set].sort().map(i=>DAYS[i]),bad:t.length>0&&!set.size}}
+const inID=(la,ln)=>la>=-12&&la<=7.5&&ln>=94&&ln<=142;
+
+/* ---------- state helpers ---------- */
+function reindex(){S.stores.forEach((s,i)=>{s.k=i;s._h=(s.name+' '+s.id+' '+s.sales+' '+s.days.join(' ')).toLowerCase()});
+ R.maxO=Math.max(1,...S.stores.map(s=>s.omset||0))}
+const salesList=()=>[...new Set(S.stores.map(s=>s.sales))].sort((a,b)=>a.localeCompare(b));
+function assignColors(){R.colors={};salesList().forEach((n,i)=>R.colors[n]=`hsl(${Math.round((i*137.508)%360)} 70% 56%)`)}
+const col=n=>R.colors[n]||'#888';
+const accNow=()=>S.accent||(THEMES[S.theme]||THEMES.gelap).acc;
+function passes(s,skipSales){
+ if(!skipSales&&!R.sales.has(s.sales))return false;
+ if(!(s.days.length?s.days.some(d=>R.days.has(d)):R.days.has('-')))return false;
+ if((s.omset||0)<R.minO)return false;
+ const q=R.q.trim().toLowerCase();if(q&&!q.split(/\s+/).every(t=>s._h.includes(t)))return false;return true}
+const filt=skip=>S.stores.filter(s=>passes(s,skip));
+
+/* ---------- map ---------- */
+const map=L.map('map',{preferCanvas:true,zoomControl:false}).setView([-6.2,106.82],11);
+L.control.zoom({position:'bottomright'}).addTo(map);
+const tile=L.tileLayer(DARK,{maxZoom:19,subdomains:'abcd',attribution:'© OpenStreetMap · © CARTO'}).addTo(map);
+const base=L.layerGroup().addTo(map),routeL=L.layerGroup().addTo(map),meL=L.layerGroup().addTo(map),depotL=L.layerGroup().addTo(map);
+const gm=s=>`https://www.google.com/maps/dir/?api=1&destination=${s.lat},${s.lng}&travelmode=two-wheeler`;
+function popupHtml(s){return `<div class="pp"><b>${esc(s.name)}</b><div class="m">${esc(s.id)} · <span style="color:${col(s.sales)}">●</span> ${esc(s.sales)}</div><div class="m">Hari: ${s.days.length?s.days.join(', '):'-'}</div><div class="o">${esc(S.label)}: <b>${rpFull(s.omset)}</b></div><div class="pb"><a href="${gm(s)}" target="_blank" rel="noopener">Navigasi</a><button data-act="start" data-k="${s.k}">Titik awal</button></div></div>`}
+map.on('popupopen',e=>{e.popup.getElement().querySelectorAll('[data-act="start"]').forEach(b=>b.onclick=()=>{const s=S.stores[+b.dataset.k];$('#startMode').value='store';$('#startStore').value=`${s.name} (${s.id})`;syncStart();switchTab('route');map.closePopup();toast('Titik awal: '+s.name)})});
+map.on('click',e=>{if(!R.pick)return;R.pick=false;$('#depotPick').classList.remove('pri');setDepot(e.latlng.lat,e.latlng.lng)});
+function drawMarkers(F){base.clearLayers();
+ F.forEach(s=>{const r=S.sizeByOmset?4+9*Math.sqrt((s.omset||0)/R.maxO):6;
+  const m=L.circleMarker([s.lat,s.lng],{radius:r,color:'#fff',weight:1,opacity:.8,fillColor:col(s.sales),fillOpacity:.88});
+  m.bindTooltip(s.name,{direction:'top',offset:[0,-4]});m.bindPopup(()=>popupHtml(s));s._m=m;m.addTo(base)})}
+function fit(F){F=F||filt();if(!F.length)return;const b=L.latLngBounds(F.map(s=>[s.lat,s.lng]));map.fitBounds(b,{padding:[40,40],maxZoom:16})}
+
+/* ---------- apply / render ---------- */
+function clearRoute(){R.route=null;routeL.clearLayers();if(!map.hasLayer(base))map.addLayer(base);$('#routeOut').innerHTML='';$('#routeHint').style.display=''}
+let fitNext=true;
+function apply(doFit=true){
+ clearRoute();const F=filt();drawMarkers(F);kpis(F);renderSales();renderDays();renderList(F);
+ $('#empty').classList.toggle('hidden',S.stores.length>0);
+ if(doFit&&fitNext)fit(F);}
+function kpis(F){const sm=new Set(F.map(s=>s.sales)).size,tot=F.reduce((a,s)=>a+(s.omset||0),0);
+ const rt=R.route;
+ $('#kpis').innerHTML=`<div class="k"><span>Toko</span><b>${F.length}<small style="color:var(--mut);font-weight:400"> / ${S.stores.length}</small></b></div><div class="k"><span>Salesman</span><b>${sm}</b></div><div class="k"><span>Σ ${esc(S.label)}</span><b>${rp(tot)}</b></div><div class="k"><span>Rata-rata / toko</span><b>${F.length?rp(tot/F.length):'-'}</b></div><div class="k ${rt?'hl':''}"><span>Jarak rute</span><b>${rt?km1(rt.km):'—'}</b></div>`}
+function renderSales(){const base2=filt(true),agg={};base2.forEach(s=>{const a=agg[s.sales]||(agg[s.sales]={n:0,o:0});a.n++;a.o+=s.omset||0});
+ const mx=Math.max(1,...Object.values(agg).map(a=>a.o));
+ $('#salesList').innerHTML=salesList().map(n=>{const a=agg[n]||{n:0,o:0};return `<label class="row" style="--c:${col(n)}"><input type="checkbox" data-s="${esc(n)}" ${R.sales.has(n)?'checked':''}><i style="background:${col(n)}"></i><span class="nm">${esc(n)}</span><span class="ct">${a.n} toko · ${rp(a.o)}</span><em style="width:${(a.o/mx*100).toFixed(0)}%"></em></label>`}).join('')}
+function renderDays(){const cnt={};filt().forEach(()=>{});S.stores.forEach(s=>{if(!R.sales.has(s.sales))return;(s.days.length?s.days:['-']).forEach(d=>cnt[d]=(cnt[d]||0)+1)});
+ const ds=DAYS.filter(d=>S.stores.some(s=>s.days.includes(d)));if(S.stores.some(s=>!s.days.length))ds.push('-');
+ $('#dayList').innerHTML=ds.map(d=>`<button class="chip ${R.days.has(d)?'on':''}" data-d="${d}">${d==='-'?'Tanpa hari':d}<small>${cnt[d]||0}</small></button>`).join('')}
+function renderList(F){let a=F.slice();const so=R.sort;
+ if(so==='near'&&R.pos){a.forEach(s=>s._d=hav(R.pos,s));a.sort((x,y)=>x._d-y._d)}
+ else if(so==='name')a.sort((x,y)=>x.name.localeCompare(y.name));
+ else if(so==='sales')a.sort((x,y)=>x.sales.localeCompare(y.sales)||y.omset-x.omset);
+ else a.sort((x,y)=>(y.omset||0)-(x.omset||0));
+ const cap=300,sl=a.slice(0,cap);
+ $('#listBox').innerHTML=((sl.map(s=>`<div class="item" data-k="${s.k}"><i style="background:${col(s.sales)}"></i><div class="t"><b>${esc(s.name)}</b><span>${esc(s.id)} · ${esc(s.sales)} · ${s.days.length?s.days.map(d=>d.slice(0,3)).join(','):'-'}</span></div><div class="o">${rp(s.omset)}${so==='near'&&R.pos?`<small>${km1(s._d)}</small>`:''}</div></div>`).join(''))||'<div class="note">Tidak ada toko yang cocok.</div>')+(a.length>cap?`<div class="note">Menampilkan ${cap} dari ${a.length}. Persempit pakai filter atau pencarian.</div>`:'');
+ $('#minOl').textContent=`${S.label} ≥`;
+ $('#dl').innerHTML=S.stores.slice(0,5000).map(s=>`<option value="${esc(s.name)} (${esc(s.id)})">`).join('')}
+function focusStore(s){if(!s)return;const go=()=>{map.flyTo([s.lat,s.lng],Math.max(map.getZoom(),16),{duration:.6});setTimeout(()=>{if(s._m&&base.hasLayer(s._m))s._m.openPopup();else L.popup().setLatLng([s.lat,s.lng]).setContent(popupHtml(s)).openOn(map)},650)};go();
+ if(window.innerWidth<=820)window.scrollTo(0,0)}
+
+/* ---------- init data ---------- */
+function initData(){reindex();assignColors();
+ R.sales=new Set(S.stores.map(s=>s.sales));R.days=new Set(S.stores.flatMap(s=>s.days.length?s.days:['-']));
+ R.q='';$('#q').value='';R.minO=0;$('#minO').value='';$('#sizeO').checked=S.sizeByOmset;
+ fitNext=true;apply(true);drawDepot();}
+
+/* ---------- events: filter ---------- */
+$('#salesList').addEventListener('change',e=>{const n=e.target.dataset.s;if(n==null)return;e.target.checked?R.sales.add(n):R.sales.delete(n);apply()});
+$('#dayList').addEventListener('click',e=>{const b=e.target.closest('[data-d]');if(!b)return;const d=b.dataset.d;R.days.has(d)?R.days.delete(d):R.days.add(d);apply()});
+$$('[data-all]').forEach(b=>b.onclick=()=>{const t=b.dataset.all;if(t==='sales')R.sales=new Set(S.stores.map(s=>s.sales));else R.days=new Set(S.stores.flatMap(s=>s.days.length?s.days:['-']));apply()});
+$$('[data-none]').forEach(b=>b.onclick=()=>{const t=b.dataset.none;if(t==='sales')R.sales=new Set();else R.days=new Set();apply()});
+$('#minO').oninput=e=>{R.minO=+e.target.value||0;apply(false)};
+$('#sizeO').onchange=e=>{S.sizeByOmset=e.target.checked;save();apply(false)};
+let qt;$('#q').oninput=e=>{R.q=e.target.value;clearTimeout(qt);qt=setTimeout(()=>{apply(true);const F=filt();if(R.q&&F.length===1)focusStore(F[0])},250)};
+$('#q').onkeydown=e=>{if(e.key==='Enter'){fit();switchTab('list')}};
+$('#qx').onclick=()=>{$('#q').value='';R.q='';apply(true)};
+$('#sortBy').onchange=e=>{R.sort=e.target.value;if(R.sort==='near'&&!R.pos){locate(()=>renderList(filt()))}renderList(filt())};
+$('#listBox').addEventListener('click',e=>{const it=e.target.closest('[data-k]');if(it)focusStore(S.stores[+it.dataset.k])});
+function switchTab(t){$$('.tabs button').forEach(b=>b.classList.toggle('on',b.dataset.t===t));$$('.pane').forEach(p=>p.classList.toggle('on',p.id==='p-'+t))}
+$$('.tabs button').forEach(b=>b.onclick=()=>switchTab(b.dataset.t));
+$('#btnFit').onclick=()=>fit();
+
+/* ---------- GPS ---------- */
+function drawMe(){meL.clearLayers();if(!R.pos)return;L.circle([R.pos.lat,R.pos.lng],{radius:R.pos.acc||30,color:'#3b82f6',weight:1,fillOpacity:.1}).addTo(meL);L.marker([R.pos.lat,R.pos.lng],{icon:L.divIcon({className:'',html:'<div class="me"></div>',iconSize:[14,14],iconAnchor:[7,7]}),interactive:false}).addTo(meL)}
+function locate(cb){if(!navigator.geolocation){toast('GPS tidak tersedia di perangkat ini');return}
+ if(cb)R.cbs.push(cb);
+ if(R.watch==null){R.watch=navigator.geolocation.watchPosition(p=>{R.pos={lat:p.coords.latitude,lng:p.coords.longitude,acc:p.coords.accuracy};drawMe();R.cbs.splice(0).forEach(f=>f(R.pos))},()=>{toast('Izin lokasi ditolak atau GPS gagal. Cek pengaturan browser.');R.watch=null;R.cbs=[]},{enableHighAccuracy:true,maximumAge:5000,timeout:15000})}
+ else if(R.pos)R.cbs.splice(0).forEach(f=>f(R.pos))}
+const getPos=()=>new Promise((res,rej)=>{if(R.pos&&R.watch!=null)return res(R.pos);locate(res);setTimeout(()=>rej(new Error('timeout')),15000)});
+$('#btnGps').onclick=()=>locate(p=>map.flyTo([p.lat,p.lng],15));
+
+/* ---------- route ---------- */
+const rad=Math.PI/180;
+function hav(a,b){const dl=(b.lat-a.lat)*rad,dg=(b.lng-a.lng)*rad,x=Math.sin(dl/2)**2+Math.cos(a.lat*rad)*Math.cos(b.lat*rad)*Math.sin(dg/2)**2;return 12742*Math.asin(Math.sqrt(x))}
+function optimize(start,pts,closed){const nodes=[start,...pts],n=nodes.length,D=nodes.map(a=>Float32Array.from(nodes,b=>hav(a,b)));
+ const vis=new Uint8Array(n);vis[0]=1;const t=[0];let cur=0;
+ for(let i=1;i<n;i++){let b=-1,bd=1e18;for(let j=1;j<n;j++)if(!vis[j]&&D[cur][j]<bd){bd=D[cur][j];b=j}vis[b]=1;t.push(b);cur=b}
+ let imp=true,it=0;
+ while(imp&&it<80){imp=false;it++;
+  for(let i=1;i<n-1;i++)for(let j=i+1;j<n;j++){
+   const a=t[i-1],b=t[i],c=t[j],d=j+1<n?t[j+1]:(closed?t[0]:-1);
+   const bef=D[a][b]+(d>=0?D[c][d]:0),aft=D[a][c]+(d>=0?D[b][d]:0);
+   if(aft<bef-1e-9){for(let x=i,y=j;x<y;x++,y--){const tmp=t[x];t[x]=t[y];t[y]=tmp}imp=true}}}
+ return t.slice(1).map(i=>nodes[i])}
+async function osrm(seq){const legs=[],geom=[];
+ for(let i=0;i<seq.length-1;i+=79){const part=seq.slice(i,Math.min(i+80,seq.length));
+  const url=`https://router.project-osrm.org/route/v1/driving/${part.map(p=>p.lng.toFixed(6)+','+p.lat.toFixed(6)).join(';')}?overview=full&geometries=geojson`;
+  const ctl=new AbortController(),to=setTimeout(()=>ctl.abort(),20000);
+  const r=await fetch(url,{signal:ctl.signal});clearTimeout(to);const j=await r.json();if(j.code!=='Ok')throw new Error(j.code);
+  const rt=j.routes[0];rt.legs.forEach(l=>legs.push({km:l.distance/1000,min:l.duration/60}));rt.geometry.coordinates.forEach(c=>geom.push([c[1],c[0]]))}
+ return{legs,geom}}
+function fallback(seq){const legs=[],geom=seq.map(p=>[p.lat,p.lng]);for(let i=0;i<seq.length-1;i++){const k=hav(seq[i],seq[i+1])*1.35;legs.push({km:k,min:k/25*60})}return{legs,geom}}
+function syncStart(){const m=$('#startMode').value;$('#sp-depot').style.display=m==='depot'?'':'none';$('#sp-store').style.display=m==='store'?'':'none'}
+$('#startMode').onchange=syncStart;
+function setDepot(lat,lng){S.depot={lat,lng};save();drawDepot();toast('Titik depo disimpan')}
+function drawDepot(){depotL.clearLayers();$('#depotNote').textContent=S.depot?`Tersimpan: ${S.depot.lat.toFixed(5)}, ${S.depot.lng.toFixed(5)}`:'Belum diatur. Tempel koordinat dari Google Maps atau klik titik di peta.';
+ if(S.depot){$('#depotIn').value=`${S.depot.lat.toFixed(6)}, ${S.depot.lng.toFixed(6)}`;L.marker([S.depot.lat,S.depot.lng],{icon:L.divIcon({className:'',html:'<div class="num s">D</div>',iconSize:[24,24],iconAnchor:[12,12]})}).bindTooltip('Depo / Kantor').addTo(depotL)}}
+$('#depotSet').onclick=()=>{const m=$('#depotIn').value.match(/-?\d+(?:[.,]\d+)?/g);if(!m||m.length<2)return toast('Format: -6.2088, 106.8456');const la=pCoord(m[0]),ln=pCoord(m[1]);if(!inID(la,ln))return toast('Koordinat di luar Indonesia, cek lagi');setDepot(la,ln);map.flyTo([la,ln],14)};
+$('#depotPick').onclick=()=>{R.pick=!R.pick;$('#depotPick').classList.toggle('pri',R.pick);if(R.pick)toast('Klik lokasi depo di peta')};
+const numIcon=(n,c)=>L.divIcon({className:'',html:`<div class="num" style="${c?`background:${c}`:''}">${n}</div>`,iconSize:[24,24],iconAnchor:[12,12]});
+function findStart(){const v=$('#startStore').value.trim();return S.stores.find(s=>`${s.name} (${s.id})`===v)||S.stores.find(s=>s.name.toLowerCase()===v.toLowerCase())}
+$('#btnRoute').onclick=async()=>{
+ const F=filt();if(!F.length)return toast('Tidak ada toko pada filter');
+ const m=$('#startMode').value;let start,label,ex=null;
+ try{
+  if(m==='depot'){if(!S.depot)return toast('Atur titik depo dulu');start={...S.depot};label='Depo / Kantor'}
+  else if(m==='gps'){toast('Mengambil posisi GPS…');const p=await getPos();start={lat:p.lat,lng:p.lng};label='Posisi saya'}
+  else{const s=findStart();if(!s)return toast('Pilih toko awal dari daftar saran');start={lat:s.lat,lng:s.lng};label=s.name;ex=s}
+ }catch(e){return toast('Gagal ambil lokasi GPS')}
+ const pts=F.filter(s=>s!==ex);
+ if(!pts.length)return toast('Cuma ada 1 toko, tidak ada rute');
+ if(pts.length>300)return toast('Maksimal 300 toko per rute. Persempit filter dulu.');
+ const btn=$('#btnRoute');btn.disabled=true;btn.textContent='Menyusun rute…';
+ const closed=$('#roundTrip').checked,svc=Math.max(0,+$('#svc').value||0);S.svc=svc;save();
+ const order=optimize(start,pts,closed),seq=[start,...order];if(closed)seq.push(start);
+ let res,est=false;try{res=await osrm(seq)}catch(e){res=fallback(seq);est=true}
+ btn.disabled=false;btn.textContent='Susun rute optimal';
+ const km=res.legs.reduce((a,l)=>a+l.km,0),drive=res.legs.reduce((a,l)=>a+l.min,0),total=drive+order.length*svc;
+ R.route={order,start,label,km,drive,total,legs:res.legs,est,closed,svc};
+ routeL.clearLayers();map.removeLayer(base);
+ const poly=L.polyline(res.geom,{color:accNow(),weight:5,opacity:.85,dashArray:est?'8 8':null}).addTo(routeL);
+ L.marker([start.lat,start.lng],{icon:L.divIcon({className:'',html:'<div class="num s">S</div>',iconSize:[24,24],iconAnchor:[12,12]})}).bindTooltip(label).addTo(routeL);
+ order.forEach((s,i)=>L.marker([s.lat,s.lng],{icon:numIcon(i+1)}).bindPopup(()=>popupHtml(s)).bindTooltip(`${i+1}. ${s.name}`).addTo(routeL));
+ map.fitBounds(poly.getBounds(),{padding:[40,40]});
+ kpis(F);renderRoute();if(window.innerWidth<=820)toast('Rute siap. Scroll panel untuk daftar toko.')};
+function renderRoute(){const r=R.route;if(!r)return;$('#routeHint').style.display='none';
+ const gl=(from,arr)=>`https://www.google.com/maps/dir/?api=1&origin=${from.lat},${from.lng}&destination=${arr[arr.length-1].lat},${arr[arr.length-1].lng}${arr.length>1?'&waypoints='+arr.slice(0,-1).map(s=>s.lat+','+s.lng).join('%7C'):''}&travelmode=two-wheeler`;
+ let batches='';for(let i=0;i<r.order.length;i+=10){const arr=r.order.slice(i,i+10),from=i===0?r.start:r.order[i-1];batches+=`<a href="${gl(from,arr)}" target="_blank" rel="noopener">Maps ${i+1}–${i+arr.length}</a>`}
+ $('#routeOut').innerHTML=`${r.est?'<div class="note" style="color:#fbbf24">Server rute jalan tidak merespons. Jarak berupa estimasi garis lurus × 1,35.</div>':''}
+ <div class="sum"><div><span>Toko dikunjungi</span><b>${r.order.length}</b></div><div><span>Jarak ${r.est?'(estimasi)':'jalan'}</span><b>${km1(r.km)}</b></div><div><span>Waktu jalan</span><b>${fmtMin(r.drive)}</b></div><div><span>Total + ${r.svc} mnt/toko</span><b>${fmtMin(r.total)}</b></div></div>
+ <div class="gh"><b>Buka di Google Maps (per 10 toko)</b></div><div class="batch">${batches}</div>
+ <div class="gh"><b>Urutan kunjungan</b><button class="btn sm" id="btnXls">Export Excel</button></div>
+ ${r.order.map((s,i)=>`<div class="stop"><span class="n">${i+1}</span><div class="t" data-k="${s.k}"><b>${esc(s.name)}</b><span>${esc(s.sales)} · +${km1(r.legs[i].km)} · ${fmtMin(r.legs[i].min)}</span></div><a href="${gm(s)}" target="_blank" rel="noopener">Navigasi</a></div>`).join('')}`;
+ $('#btnXls').onclick=exportRoute;
+ $('#routeOut').querySelectorAll('.t[data-k]').forEach(el=>el.onclick=()=>focusStore(S.stores[+el.dataset.k]))}
+function exportRoute(){const r=R.route;if(!r)return;
+ const rows=r.order.map((s,i)=>({Urutan:i+1,'ID Pelanggan':s.id,'Nama Pelanggan':s.name,Salesman:s.sales,'Hari Kunjungan':s.days.join(', '),[S.label]:s.omset,Latitude:s.lat,Longitude:s.lng,'Jarak dari sebelumnya (km)':+r.legs[i].km.toFixed(2),'Waktu tempuh (menit)':Math.round(r.legs[i].min),'Link Navigasi':gm(s)}));
+ const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(rows),'Rute');XLSX.writeFile(wb,'Rute_Kunjungan.xlsx')}
+
+/* ---------- upload ---------- */
+const FIELDS=[['sales','Nama Salesman'],['id','ID Pelanggan'],['name','Nama Pelanggan'],['day','Hari Kunjungan'],['omset','Omset (label ikut header)'],['lat','Latitude'],['lng','Longitude'],['geo','Geotag gabungan (opsional)']];
+const RX={lat:/^lat|latitude/i,lng:/^lon|^lng|longitude/i,id:/(^|[\s_.])(id|kode|code|no)([\s_.]|$)|id\s*(pelanggan|cust|toko|outlet)/i,sales:/salesman|sales|^sls|^sm$|karyawan/i,name:/nama\s*(pelanggan|toko|outlet|cust)|customer|outlet|toko|pelanggan|nama/i,day:/hari|day|visit|kunjungan/i,omset:/omset|omzet|revenue|l3m|mtd|rupiah|value|nilai|amount|penjualan|sales\s*value/i,geo:/geo|koordinat|coord|lokasi/i};
+let WB=null,RAW=[],HDR=[],MAP={},PARSED=null;
+const modal=$('#modal');
+const openUp=()=>{modal.classList.remove('hidden')};
+const closeUp=()=>{modal.classList.add('hidden')};
+$('#btnUp').onclick=openUp;$('#e-up').onclick=openUp;$$('[data-close]').forEach(b=>b.onclick=closeUp);
+modal.addEventListener('mousedown',e=>{if(e.target===modal)closeUp()});
+const drop=$('#drop');['dragover','dragenter'].forEach(ev=>drop.addEventListener(ev,e=>{e.preventDefault();drop.classList.add('over')}));
+['dragleave','drop'].forEach(ev=>drop.addEventListener(ev,e=>{e.preventDefault();drop.classList.remove('over')}));
+drop.addEventListener('drop',e=>{if(e.dataTransfer.files[0])readFile(e.dataTransfer.files[0])});
+$('#file').onchange=e=>{if(e.target.files[0])readFile(e.target.files[0]);e.target.value=''};
+function readFile(f){const rd=new FileReader();rd.onload=e=>{try{WB=XLSX.read(new Uint8Array(e.target.result),{type:'array'});
+ $('#sheetSel').innerHTML=WB.SheetNames.map(n=>`<option>${esc(n)}</option>`).join('');loadSheet();$('#step2').style.display=''}catch(err){toast('File tidak bisa dibaca. Pastikan format xlsx/xls/csv.')}};rd.readAsArrayBuffer(f)}
+$('#sheetSel').onchange=loadSheet;
+function loadSheet(){const ws=WB.Sheets[$('#sheetSel').value];const rows=XLSX.utils.sheet_to_json(ws,{header:1,defval:'',raw:true});
+ let h=rows.findIndex((r,i)=>i<10&&r.filter(c=>String(c).trim()!=='').length>=3);if(h<0)h=0;
+ HDR=(rows[h]||[]).map(x=>String(x).trim());RAW=rows.slice(h+1);
+ MAP={};const used=new Set();
+ ['lat','lng','id','sales','name','day','omset','geo'].forEach(k=>{if(k==='geo'&&MAP.lat>=0&&MAP.lng>=0){MAP.geo=-1;return}
+  const i=HDR.findIndex((x,ix)=>x&&!used.has(ix)&&RX[k].test(x));MAP[k]=i;if(i>=0)used.add(i)});
+ $('#mg').innerHTML=FIELDS.map(([k,l])=>`<div><label for="m-${k}">${l}</label><select id="m-${k}" data-m="${k}"><option value="-1">— tidak ada —</option>${HDR.map((x,i)=>x?`<option value="${i}" ${MAP[k]===i?'selected':''}>${esc(x)}</option>`:'').join('')}</select></div>`).join('');
+ $$('#mg select').forEach(s=>s.onchange=()=>{MAP[s.dataset.m]=+s.value;preview()});preview()}
+function build(){const g=(r,k)=>MAP[k]>=0?r[MAP[k]]:'';const out=new Map(),bad=[];let tot=0,swapped=0,noDay=0,merged=0;
+ RAW.forEach((r,i)=>{if(!r.some(c=>String(c).trim()!==''))return;tot++;const rowNo=i+2;
+  let la,ln;if(MAP.lat>=0&&MAP.lng>=0){la=pCoord(g(r,'lat'));ln=pCoord(g(r,'lng'))}else if(MAP.geo>=0){const m=String(g(r,'geo')).match(/-?\d+(?:\.\d+)?/g)||[];la=pCoord(m[0]);ln=pCoord(m[1])}else{la=NaN;ln=NaN}
+  let id=String(g(r,'id')).trim(),nm=String(g(r,'name')).trim();if(!id&&!nm){bad.push(`Baris ${rowNo}: ID dan nama kosong`);return}
+  if(!isFinite(la)||!isFinite(ln)){bad.push(`Baris ${rowNo}: koordinat kosong / format salah`);return}
+  if(!inID(la,ln)){if(inID(ln,la)){[la,ln]=[ln,la];swapped++}else{bad.push(`Baris ${rowNo}: koordinat di luar Indonesia (${la}, ${ln})`);return}}
+  id=id||nm;nm=nm||id;const sales=String(g(r,'sales')).trim()||'Tanpa Salesman';
+  const pd=MAP.day>=0?pDays(g(r,'day')):{days:[],bad:false};const om=MAP.omset>=0?pMoney(g(r,'omset')):0;
+  const key=id+'|'+sales,ex=out.get(key);
+  if(ex){merged++;pd.days.forEach(d=>{if(!ex.days.includes(d))ex.days.push(d)});ex.days.sort((a,b)=>DAYS.indexOf(a)-DAYS.indexOf(b));ex.omset=Math.max(ex.omset,om)}
+  else{if(!pd.days.length)noDay++;out.set(key,{id,name:nm,sales,days:pd.days,omset:om,lat:la,lng:ln})}});
+ return{stores:[...out.values()],bad,tot,swapped,noDay,merged}}
+function preview(){PARSED=build();const p=PARSED,sm=new Set(p.stores.map(s=>s.sales)).size;
+ const miss=[];if(!(MAP.lat>=0&&MAP.lng>=0)&&!(MAP.geo>=0))miss.push('Latitude / Longitude belum dipilih');if(MAP.id<0&&MAP.name<0)miss.push('ID atau Nama Pelanggan belum dipilih');
+ $('#pv').innerHTML=`<div class="${p.stores.length?'ok':'warn'}"><b>${p.stores.length}</b> toko valid dari ${p.tot} baris · <b>${sm}</b> salesman</div>
+ ${miss.map(m=>`<div class="warn">⚠ ${m}</div>`).join('')}
+ ${p.swapped?`<div class="warn">${p.swapped} baris lat/long tertukar, otomatis dibalik</div>`:''}
+ ${p.merged?`<div class="note">${p.merged} baris duplikat (ID + salesman sama) digabung, hari dijumlah</div>`:''}
+ ${p.noDay&&MAP.day>=0?`<div class="note">${p.noDay} toko tanpa hari yang dikenali</div>`:''}
+ ${p.bad.length?`<div class="warn">${p.bad.length} baris dilewati</div><ul>${p.bad.slice(0,5).map(b=>`<li>${esc(b)}</li>`).join('')}${p.bad.length>5?`<li>…dan ${p.bad.length-5} lainnya</li>`:''}</ul>`:''}`;
+ $('#apply').disabled=!p.stores.length}
+$('#apply').onclick=()=>{if(!PARSED||!PARSED.stores.length)return;const mode=document.querySelector('input[name=mode]:checked').value;
+ if(mode==='merge'){const ids=new Set(PARSED.stores.map(s=>s.id));S.stores=S.stores.filter(s=>!ids.has(s.id)).concat(PARSED.stores)}else S.stores=PARSED.stores;
+ if(MAP.omset>=0)S.label=HDR[MAP.omset]||'Omset';else if(mode==='replace')S.label='Omset';
+ save();initData();closeUp();toast(`${PARSED.stores.length} toko dimuat`)};
+
+/* ---------- demo & template ---------- */
+function demo(){const names=['Hendra','Steven','Rossi','Mikael','Rahmat'],pre=['Sumber','Berkah','Mitra','Jaya','Barokah','Sinar','Makmur','Cahaya','Rezeki','Abadi'],suf=['Rejeki','Grosir','Snack','Mart','Kelontong','Sembako','Jaya','Utama'];
+ let seed=7;const rnd=()=>(seed=(seed*16807)%2147483647)/2147483647;const st=[];
+ names.forEach((n,ni)=>{const cx=-6.17-0.04*Math.cos(ni*1.3),cy=106.76+0.06*ni;for(let i=0;i<24;i++){const d1=DAYS[Math.floor(rnd()*6)];const two=rnd()<.2;const days=two?[d1,DAYS[(DAYS.indexOf(d1)+3)%6]]:[d1];days.sort((a,b)=>DAYS.indexOf(a)-DAYS.indexOf(b));
+  st.push({id:'C'+(10000+ni*100+i),name:`${pre[Math.floor(rnd()*10)]} ${suf[Math.floor(rnd()*8)]} ${i+1}`,sales:n,days,omset:Math.round((2+rnd()*rnd()*60)*1e6),lat:cx+(rnd()-.5)*.09,lng:cy+(rnd()-.5)*.07})}});
+ S.stores=st;S.label='Omset MTD';save();initData();toast('Data contoh dimuat. Upload Excel untuk pakai data asli.')}
+$('#e-demo').onclick=demo;
+$('#e-tpl').onclick=()=>{const ws=XLSX.utils.aoa_to_sheet([['Nama Salesman','ID Pelanggan','Nama Pelanggan','Hari Kunjungan','Omset MTD','Latitude','Longitude'],['Hendra','C10001','Toko Sumber Rejeki','Senin, Kamis',12500000,-6.2088,106.8456],['Steven','C10002','Grosir Berkah Jaya','Selasa',48200000,-6.1754,106.8272]]);const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,'Jadwal');XLSX.writeFile(wb,'Template_Jadwal_Kunjungan.xlsx')};
+
+/* ---------- theme ---------- */
+function ink(h){const n=parseInt(h.slice(1),16),r=n>>16,g=n>>8&255,b=n&255;return (r*299+g*587+b*114)/1000>150?'#111':'#fff'}
+function applyTheme(){const th=THEMES[S.theme]||THEMES.gelap,a=accNow(),st=document.documentElement.style;
+ Object.entries({'--bg':th.bg,'--panel':th.panel,'--panel2':th.panel2,'--text':th.text,'--mut':th.mut,'--line':th.line,'--acc':a,'--acc-ink':ink(a)}).forEach(([k,v])=>st.setProperty(k,v));
+ tile.setUrl(th.dark?DARK:LIGHT);$('#accPick').value=a;
+ $$('#sw button').forEach(b=>b.classList.toggle('on',b.dataset.th===S.theme));
+ if(R.route){routeL.eachLayer(l=>{if(l.setStyle)l.setStyle({color:a})})}}
+$('#sw').innerHTML=Object.entries(THEMES).map(([k,t])=>`<button data-th="${k}" title="${t.n}"><span style="background:${t.bg};display:flex"><i style="flex:1;background:${t.panel}"></i><i style="flex:1;background:${t.acc}"></i></span><small style="background:${t.panel2};color:${t.text}">${t.n}</small></button>`).join('');
+$('#accDots').innerHTML=ACCS.map(c=>`<button class="d" data-c="${c}" style="background:${c}" title="${c}"></button>`).join('');
+$('#sw').onclick=e=>{const b=e.target.closest('[data-th]');if(!b)return;S.theme=b.dataset.th;S.accent=null;save();applyTheme()};
+$('#accDots').onclick=e=>{const b=e.target.closest('[data-c]');if(!b)return;S.accent=b.dataset.c;save();applyTheme()};
+$('#accPick').oninput=e=>{S.accent=e.target.value;save();applyTheme()};
+$('#accReset').onclick=()=>{S.accent=null;save();applyTheme()};
+$('#btnTheme').onclick=e=>{e.stopPropagation();$('#themePop').classList.toggle('on')};
+document.addEventListener('click',e=>{if(!e.target.closest('#themePop')&&!e.target.closest('#btnTheme'))$('#themePop').classList.remove('on')});
+document.addEventListener('keydown',e=>{if(e.key==='Escape'){closeUp();$('#themePop').classList.remove('on')}});
+
+/* ---------- boot ---------- */
+load();$('#svc').value=S.svc;applyTheme();syncStart();
+if(S.stores.length)initData();else{reindex();apply(false);drawDepot()}
+})();
+</script>
+</body>
+</html>
